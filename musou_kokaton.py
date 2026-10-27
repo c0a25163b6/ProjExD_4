@@ -258,7 +258,7 @@ class Shield(pg.sprite.Sprite):
         self.life = life
         
         # 壁の大きさ
-        self.img_w = 15
+        self.img_w = 10
         self.img_h = bird.image.get_height() * 2  # こうかとんの2倍
         
         # 初回更新
