@@ -320,6 +320,7 @@ class EMP:
         screen.blit(emp_img,(0,0))
         pg.display.update()
         time.sleep(0.05)
+    
 class Gravity(pg.sprite.Sprite):
     """
     【追加機能2】画面全体を覆う重力場に関するクラス
@@ -443,6 +444,7 @@ def main():
     shld = pg.sprite.Group()
 
     # 初期はパターン1（5方向）
+    
     beam_pattern = 1
 
     pattern_f = pg.font.Font(None, 35)
@@ -521,21 +523,23 @@ def main():
         for emy in pg.sprite.groupcollide(emys, gras, True, False).keys():
             exps.add(Explosion(emy, 100))
             score.value += 10
+        for bomb in pg.sprite.groupcollide(bombs, gras, True, False).keys():
+            exps.add(Explosion(bomb, 50))
+            score.value += 1
         # こうかとんと爆弾の衝突判定
         # 追加5：防御した際の弾幕の判定
         for bomb in pg.sprite.groupcollide(bombs, shld, True, False).keys():
                     exps.add(Explosion(bomb, 50))
                     score.value += 1
 
-
         for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
-            
-            if bird.state == "hyper":
+            if getattr(bomb, "state", "active") == "inactive":
+                pass
+            elif bird.state == "hyper":
                 # 無敵状態4
                 # 無敵状態ならば爆弾を爆発させる
                 exps.add(Explosion(bomb, 50))
                 score.value += 1
-
             else: # 無敵修正
                 life.num -= 1
                 if life.num <= 0:
