@@ -11,6 +11,26 @@ HEIGHT = 650  # ゲームウィンドウの高さ
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
+class Life:
+    """
+    残機数（ライフ）を表示・管理するクラス
+    """
+    def __init__(self, num: int):
+        self.num = num
+        self.image = pg.Surface((40, 40))
+        self.image.set_colorkey((0, 0, 0))
+        # ハートを描画するための座標群
+        points = [(16*math.sin(t/100)**3 + 20, 
+                   -(13*math.cos(t/100)-5*math.cos(2*t/100)-2*math.cos(3*t/100)-math.cos(4*t/100)) + 20) 
+                  for t in range(0, 628)]
+        pg.draw.polygon(self.image, (255, 0, 0), points)
+
+    def update(self, screen: pg.Surface):
+        # 画面右下に残機数分だけハートを描画
+        for i in range(self.num):
+            screen.blit(self.image, (WIDTH - 50 - i*50 - 20, HEIGHT - 50 - 20))
+
+
 def check_bound(obj_rct: pg.Rect) -> tuple[bool, bool]:
     """
     オブジェクトが画面内or画面外を判定し，真理値タプルを返す関数
@@ -100,6 +120,26 @@ class Bird(pg.sprite.Sprite):
             self.dire = tuple(sum_mv)
             self.image = self.imgs[self.dire]
         screen.blit(self.image, self.rect)
+
+class Life:
+    """
+    残機数（ライフ）を表示・管理するクラス
+    """
+    def __init__(self, num: int):
+        self.num = num
+        self.image = pg.Surface((40, 40))
+        self.image.set_colorkey((0, 0, 0))
+        # ハートを描画するための座標群
+        points = [(16*math.sin(t/100)**3 + 20, 
+                   -(13*math.cos(t/100)-5*math.cos(2*t/100)-2*math.cos(3*t/100)-math.cos(4*t/100)) + 20) 
+                  for t in range(0, 628)]
+        pg.draw.polygon(self.image, (255, 0, 0), points)
+
+    def update(self, screen: pg.Surface):
+        # 画面右下に残機数分ハートを描画
+        for i in range(self.num):
+            screen.blit(self.image, (WIDTH - 50 - i*50 - 20, HEIGHT - 50 - 20))
+
 
 
 class Bomb(pg.sprite.Sprite):
@@ -232,7 +272,7 @@ class Score:
     def __init__(self):
         self.font = pg.font.Font(None, 50)
         self.color = (0, 0, 255)
-        self.value = 0
+        self.value = 1000
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         self.rect = self.image.get_rect()
         self.rect.center = 100, HEIGHT-50
@@ -296,6 +336,7 @@ def main():
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     bg_img = pg.image.load(f"fig/pg_bg.jpg")
     score = Score()
+    life = Life(3)
 
     bird = Bird(3, (900, 400))
     bombs = pg.sprite.Group()
@@ -313,6 +354,11 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN and event.key == pg.K_h:
+                if score.value >= 50:
+                    score.value -= 50
+                    life.num += 1
+
             # 追加5：バリア（Sキー＆コスト50）
             if event.type == pg.KEYDOWN and event.key == pg.K_s:
                 if score.value >= 50 and len(shld) == 0:
@@ -337,17 +383,20 @@ def main():
             exps.add(Explosion(bomb, 50))  # 爆発エフェクト
             score.value += 1  # 1点アップ
 
+        # こうかとんと爆弾の衝突判定
         # 追加5：防御した際の弾幕の判定
         for bomb in pg.sprite.groupcollide(bombs, shld, True, False).keys():
                     exps.add(Explosion(bomb, 50))
                     score.value += 1
 
-        for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
-            bird.change_img(8, screen)  # こうかとん悲しみエフェクト
-            score.update(screen)
-            pg.display.update()
-            time.sleep(2)
-            return
+        for bomb in pg.sprite.spritecollide(bird, bombs, True):
+            life.num -= 1
+            if life.num < 0:
+                bird.change_img(8, screen)
+                score.update(screen)
+                pg.display.update()
+                time.sleep(2)
+                return
 
         bird.update(key_lst, screen)
         beams.update()
@@ -359,6 +408,7 @@ def main():
         exps.update()
         exps.draw(screen)
         score.update(screen)
+        life.update(screen)
 
         # 追加機能5：壁の反映
         shld.update()
@@ -367,6 +417,7 @@ def main():
         pg.display.update()
         tmr += 1
         clock.tick(50)
+
 
 
 if __name__ == "__main__":
