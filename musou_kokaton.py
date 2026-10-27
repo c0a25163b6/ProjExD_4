@@ -280,7 +280,28 @@ class Score:
     def update(self, screen: pg.Surface):
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
+class Gravity(pg.sprite.Sprite):
+    """
+    【追加機能2】画面全体を覆う重力場に関するクラス
+    """
+    def __init__(self, life: int):
+        """
+        引数 life：発動時間（フレーム数）
+        """
+        super().__init__()
+        self.image = pg.Surface((WIDTH, HEIGHT))
+        pg.draw.rect(self.image, (0, 0, 0), (0, 0, WIDTH, HEIGHT))
+        self.image.set_alpha(200)  # 半透明にする
+        self.rect = self.image.get_rect()
+        self.life = life
 
+    def update(self):
+        """
+        発動時間を1減算し，0未満になったら重力場を消す
+        """
+        self.life -= 1
+        if self.life < 0:
+            self.kill()
 
 # 追加5：バリア
 class Shield(pg.sprite.Sprite):
@@ -343,6 +364,7 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    gras = pg.sprite.Group()  # 追加：重力場グループ
     shld = pg.sprite.Group()
 
     tmr = 0
@@ -354,6 +376,10 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
+                if score.value > 200:
+                    gras.add(Gravity(400))
+                    score.value -= 200
             if event.type == pg.KEYDOWN and event.key == pg.K_h:
                 if score.value >= 50:
                     score.value -= 50
@@ -382,7 +408,12 @@ def main():
         for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
             exps.add(Explosion(bomb, 50))  # 爆発エフェクト
             score.value += 1  # 1点アップ
-
+        for bomb in pg.sprite.groupcollide(bombs, gras, True, False).keys():
+            exps.add(Explosion(bomb, 50))
+            score.value += 1
+        for emy in pg.sprite.groupcollide(emys, gras, True, False).keys():
+            exps.add(Explosion(emy, 100))
+            score.value += 10
         # こうかとんと爆弾の衝突判定
         # 追加5：防御した際の弾幕の判定
         for bomb in pg.sprite.groupcollide(bombs, shld, True, False).keys():
@@ -407,6 +438,8 @@ def main():
         bombs.draw(screen)
         exps.update()
         exps.draw(screen)
+        gras.update()        
+        gras.draw(screen)
         score.update(screen)
         life.update(screen)
 
