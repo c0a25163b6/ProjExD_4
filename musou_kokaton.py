@@ -72,6 +72,10 @@ class Bird(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = xy
         self.speed = 10
+        #追加機能4 
+        self.state = "normal"  # 通常状態
+        self.hyper_life = 0    # 無敵状態の残り時間
+        self.hyper_max = 500   # 無敵状態の最大時間を管理する変数
 
     def change_img(self, num: int, screen: pg.Surface):
         """
@@ -81,6 +85,17 @@ class Bird(pg.sprite.Sprite):
         """
         self.image = pg.transform.rotozoom(pg.image.load(f"fig/{num}.png"), 0, 0.9)
         screen.blit(self.image, self.rect)
+
+    def activate_hyper(self):
+        """
+        無敵状態を発動する
+        """
+        if self.state == "normal":
+            self.state = "hyper"
+            self.hyper_life = self.hyper_max
+            return True
+
+        return False
 
     def update(self, key_lst: list[bool], screen: pg.Surface):
         """
@@ -99,6 +114,14 @@ class Bird(pg.sprite.Sprite):
         if not (sum_mv[0] == 0 and sum_mv[1] == 0):
             self.dire = tuple(sum_mv)
             self.image = self.imgs[self.dire]
+            #追加機能4　無敵状態
+            if self.state == "hyper":
+                self.image = pg.transform.laplacian(self.image)
+                self.hyper_life -= 1
+
+                if self.hyper_life <= 0:
+                    self.state = "normal"
+
         screen.blit(self.image, self.rect)
 
 
@@ -135,7 +158,7 @@ class Bomb(pg.sprite.Sprite):
         self.rect.move_ip(self.speed*self.vx, self.speed*self.vy)
         if check_bound(self.rect) != (True, True):
             self.kill()
-
+                
 
 class Beam(pg.sprite.Sprite):
     """
@@ -247,6 +270,7 @@ def main():
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     bg_img = pg.image.load(f"fig/pg_bg.jpg")
     score = Score()
+    
 
     bird = Bird(3, (900, 400))
     bombs = pg.sprite.Group()
@@ -263,6 +287,14 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+             #追加機能4 
+             # 右Shiftキーで無敵状態を発動
+            if event.type == pg.KEYDOWN and event.key == pg.K_LSHIFT: #左シフトで無敵になれる。
+                if score.value >= 100 and bird.state == "normal": # スコア100以上でこうかとんが通常状態である場合
+                    bird.state = "hyper" # 無敵状態に変更する
+                    bird.hyper_life = 100 # 無敵時間の設定(フレーム数)
+                    score.value -= 100 # スコアを100点消費する
+
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
@@ -283,11 +315,19 @@ def main():
             score.value += 1  # 1点アップ
 
         for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
-            bird.change_img(8, screen)  # こうかとん悲しみエフェクト
-            score.update(screen)
-            pg.display.update()
-            time.sleep(2)
-            return
+            if bird.state == "hyper":
+                # 無敵状態4
+                # 無敵状態ならば爆弾を爆発させる
+                exps.add(Explosion(bomb, 50))
+                score.value += 1
+
+            else:
+                #通常状態ならばゲームオーバー
+                bird.change_img(8, screen)  # こうかとん悲しみエフェクト            
+                score.update(screen)
+                pg.display.update()
+                time.sleep(2)
+                return
 
         bird.update(key_lst, screen)
         beams.update()
