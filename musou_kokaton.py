@@ -288,7 +288,7 @@ def main():
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
              #追加機能4 
-             # 右Shiftキーで無敵状態を発動
+             
             if event.type == pg.KEYDOWN and event.key == pg.K_LSHIFT: #左シフトで無敵になれる。
                 if score.value >= 100 and bird.state == "normal": # スコア100以上でこうかとんが通常状態である場合
                     bird.state = "hyper" # 無敵状態に変更する
