@@ -139,23 +139,37 @@ class Bomb(pg.sprite.Sprite):
 
 class Beam(pg.sprite.Sprite):
     """
-    ビームに関するクラス
+    ビームに関するクラス(追加用に改造)
     """
-    def __init__(self, bird: Bird):
+    def __init__(self, bird: Bird, d_angle:float = 0, speed: int = 10):
         """
         ビーム画像Surfaceを生成する
-        引数 bird：ビームを放つこうかとん
+        引数1 bird：ビームを放つこうかとん
+        引数2 d_angle：ビームの角度（5方向用）
+        引数3 speed：ビームの速度（通常時は10）
         """
         super().__init__()
         self.vx, self.vy = bird.dire
-        angle = math.degrees(math.atan2(-self.vy, self.vx))
-        self.image = pg.transform.rotozoom(pg.image.load(f"fig/beam.png"), angle, 1.0)
+        b_angle = math.degrees(math.atan2(-self.vy, self.vx))
+        angle = b_angle + d_angle
+
+        img = pg.image.load(f"fig/beam.png")
+        
+        # パターンごとの変形処理
+        if speed == 30:
+            img = pg.transform.scale(img, (img.get_width() * 5.0, img.get_height() * 0.8))
+        elif speed == 15:
+            img = pg.transform.scale(img, (img.get_width() * 0.8, img.get_height() * 15.0))
+        
+        # 引き伸ばしたビームの画像を回転させる
+        self.image = pg.transform.rotozoom(img, angle, 1.0)
+        
         self.vx = math.cos(math.radians(angle))
         self.vy = -math.sin(math.radians(angle))
         self.rect = self.image.get_rect()
-        self.rect.centery = bird.rect.centery+bird.rect.height*self.vy
-        self.rect.centerx = bird.rect.centerx+bird.rect.width*self.vx
-        self.speed = 10
+        self.rect.centery = bird.rect.centery + bird.rect.height * self.vy
+        self.rect.centerx = bird.rect.centerx + bird.rect.width * self.vx
+        self.speed = speed
 
     def update(self):
         """
@@ -242,6 +256,40 @@ class Score:
         screen.blit(self.image, self.rect)
 
 
+# 追加機能6
+class NeoBeam:
+    """
+    色んな弾幕を保存するクラス
+    """
+    # 弾幕パターンの辞書
+    patterns = {
+        1:{"angles":[-50, -30 , 0, 30, 50], "speed":12, "cost":30, "name":"MODE:5dir-beam"},  # 5方向レーザー
+        2:{"angles":[0], "speed":30, "cost":20, "name":"MODE:High-laser"},  # 高速レーザー
+        3:{"angles":[0], "speed":15, "cost":40, "name":"MODE:Wave-beam"}  # 波動拳 
+    }
+
+    def __init__(self, bird: Bird, pattern: int = 1):
+        """
+        弾幕の初期化を行う関数
+        引数1 Bird：こうかとんの位置
+        引数2 辞書のパターンの1つを取得
+        """
+        self.bird = bird
+        self.pattern = pattern
+        self.info = self.__class__.patterns.get(pattern, {"angles":[0], "speed":10, "cost":50, "name":""})
+
+    def gen_beams(self) -> list[Beam]:
+        """
+        弾幕の設定を行う関数（速度と角度）
+        """
+        beams = []
+        angles = self.info["angles"]
+        speed = self.info["speed"]
+        for angle in angles:
+            beams.append(Beam(self.bird, angle, speed))
+        return beams
+
+
 def main():
     pg.display.set_caption("真！こうかとん無双")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -254,6 +302,11 @@ def main():
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
 
+    # 初期はパターン1（5方向）
+    beam_pattern = 1
+
+    pattern_f = pg.font.Font(None, 35)
+    pattern_tmr = 0
     tmr = 0
     clock = pg.time.Clock()
     while True:
@@ -263,6 +316,22 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            # 追加機能6（右シフトで弾幕チェンジ）
+            if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT:
+                if beam_pattern < 3:
+                    beam_pattern += 1
+                else: # 3よりでかくなるならリセット
+                    beam_pattern = 1
+                pattern_tmr = 100
+            # 追加機能6（Nキーと各コストでビームを発射）
+            if event.type == pg.KEYDOWN and event.key == pg.K_n:
+                cost = NeoBeam.patterns[beam_pattern]["cost"]
+                if score.value >= cost:
+                    neobeam = NeoBeam(bird, pattern=beam_pattern)
+                    beams.add(*neobeam.gen_beams())
+                    score.value -= cost
+
+                    
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
@@ -275,7 +344,7 @@ def main():
 
         for emy in pg.sprite.groupcollide(emys, beams, True, True).keys():  # ビームと衝突した敵機リスト
             exps.add(Explosion(emy, 100))  # 爆発エフェクト
-            score.value += 10  # 10点アップ
+            score.value += 100  # 10点アップ
             bird.change_img(6, screen)  # こうかとん喜びエフェクト
 
         for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
@@ -288,6 +357,14 @@ def main():
             pg.display.update()
             time.sleep(2)
             return
+
+        # モードのテキストを設定
+        if pattern_tmr > 0:
+            pattern_tmr -= 1
+            name = NeoBeam.patterns[beam_pattern]["name"]
+            color = (255, 255, 0) # 黄色
+            txt_img = pattern_f.render(name, True, color) # 文字（name）を反映
+            screen.blit(txt_img, (30, HEIGHT - 110))
 
         bird.update(key_lst, screen)
         beams.update()
