@@ -11,26 +11,6 @@ HEIGHT = 650  # ゲームウィンドウの高さ
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
-class Life:
-    """
-    残機数（ライフ）を表示・管理するクラス
-    """
-    def __init__(self, num: int):
-        self.num = num
-        self.image = pg.Surface((40, 40))
-        self.image.set_colorkey((0, 0, 0))
-        # ハートを描画するための座標群
-        points = [(16*math.sin(t/100)**3 + 20, 
-                   -(13*math.cos(t/100)-5*math.cos(2*t/100)-2*math.cos(3*t/100)-math.cos(4*t/100)) + 20) 
-                  for t in range(0, 628)]
-        pg.draw.polygon(self.image, (255, 0, 0), points)
-
-    def update(self, screen: pg.Surface):
-        # 画面右下に残機数分だけハートを描画
-        for i in range(self.num):
-            screen.blit(self.image, (WIDTH - 50 - i*50 - 20, HEIGHT - 50 - 20))
-
-
 def check_bound(obj_rct: pg.Rect) -> tuple[bool, bool]:
     """
     オブジェクトが画面内or画面外を判定し，真理値タプルを返す関数
@@ -536,12 +516,6 @@ def main():
             score.value += 10  # 10点アップ
             bird.change_img(6, screen)  # こうかとん喜びエフェクト
 
-        for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
-            exps.add(Explosion(bomb, 50))  # 爆発エフェクト
-            score.value += 1  # 1点アップ
-        for bomb in pg.sprite.groupcollide(bombs, gras, True, False).keys():
-            exps.add(Explosion(bomb, 50))
-            score.value += 1
         for emy in pg.sprite.groupcollide(emys, gras, True, False).keys():
             exps.add(Explosion(emy, 100))
             score.value += 10
@@ -551,24 +525,24 @@ def main():
                     exps.add(Explosion(bomb, 50))
                     score.value += 1
 
-        for bomb in pg.sprite.spritecollide(bird, bombs, True):
-            life.num -= 1
-            if life.num < 0:
-                bird.change_img(8, screen)
+
         for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
+            
             if bird.state == "hyper":
                 # 無敵状態4
                 # 無敵状態ならば爆弾を爆発させる
                 exps.add(Explosion(bomb, 50))
                 score.value += 1
 
-            else:
-                #通常状態ならばゲームオーバー
-                bird.change_img(8, screen)  # こうかとん悲しみエフェクト            
-                score.update(screen)
-                pg.display.update()
-                time.sleep(2)
-                return
+            else: # ゲームオーバー修正
+                life.num -= 1
+                if life.num <= 0:
+                    #通常状態ならばゲームオーバー
+                    bird.change_img(8, screen)  # こうかとん悲しみエフェクト            
+                    score.update(screen)
+                    pg.display.update()
+                    time.sleep(2)
+                    return
 
         # モードのテキストを設定
         if pattern_tmr > 0:
