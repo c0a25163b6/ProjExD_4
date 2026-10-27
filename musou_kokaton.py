@@ -476,11 +476,11 @@ def main():
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
             if event.type == pg.KEYDOWN and event.key == pg.K_e:
-                if score.value > 20:
+                if score.value >= 60:
                     EMP(emys, bombs, screen)
                     score.value -= 60
             if event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
-                if score.value > 200:
+                if score.value >= 200:
                     gras.add(Gravity(400))
                     score.value -= 200
             if event.type == pg.KEYDOWN and event.key == pg.K_h:
@@ -513,9 +513,11 @@ def main():
 
         for emy in pg.sprite.groupcollide(emys, beams, True, True).keys():  # ビームと衝突した敵機リスト
             exps.add(Explosion(emy, 100))  # 爆発エフェクト
-            score.value += 10  # 10点アップ
+            score.value += 1000  # 10点アップ
             bird.change_img(6, screen)  # こうかとん喜びエフェクト
-
+        for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
+            exps.add(Explosion(bomb, 50))  # 爆発エフェクト
+            score.value += 1  # 1点アップ
         for emy in pg.sprite.groupcollide(emys, gras, True, False).keys():
             exps.add(Explosion(emy, 100))
             score.value += 10
@@ -534,7 +536,7 @@ def main():
                 exps.add(Explosion(bomb, 50))
                 score.value += 1
 
-            else: # ゲームオーバー修正
+            else: # 無敵修正
                 life.num -= 1
                 if life.num <= 0:
                     #通常状態ならばゲームオーバー
@@ -573,7 +575,6 @@ def main():
         pg.display.update()
         tmr += 1
         clock.tick(50)
-
 
 
 if __name__ == "__main__":
