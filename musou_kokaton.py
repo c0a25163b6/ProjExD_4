@@ -334,8 +334,6 @@ def main():
                 elif event.key == pg.K_SPACE:
                     beams.add(Beam(bird))
 
-
-                    
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
