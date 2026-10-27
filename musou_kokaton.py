@@ -263,9 +263,9 @@ class NeoBeam:
     """
     # 弾幕パターンの辞書
     patterns = {
-        1:{"angles":[-50, -30 , 0, 30, 50], "speed":12, "cost":30, "name":"MODE:5dir-beam"},  # 5方向レーザー
-        2:{"angles":[0], "speed":30, "cost":20, "name":"MODE:High-laser"},  # 高速レーザー
-        3:{"angles":[0], "speed":15, "cost":40, "name":"MODE:Wave-beam"}  # 波動拳 
+        1:{"angles":[-50, -30 , 0, 30, 50], "speed":12, "cost":0, "name":"MODE:5dir-beam"},  # 5方向レーザー（無償)
+        2:{"angles":[0], "speed":30, "cost":10, "name":"MODE:High-laser"},  # 高速レーザー
+        3:{"angles":[0], "speed":15, "cost":20, "name":"MODE:Wave-beam"}  # 波動拳 
     }
 
     def __init__(self, bird: Bird, pattern: int = 1):
@@ -276,7 +276,7 @@ class NeoBeam:
         """
         self.bird = bird
         self.pattern = pattern
-        self.info = self.__class__.patterns.get(pattern, {"angles":[0], "speed":10, "cost":50, "name":""})
+        self.info = self.__class__.patterns.get(pattern, {"angles":[0], "speed":10, "cost":0, "name":""})
 
     def gen_beams(self) -> list[Beam]:
         """
@@ -314,22 +314,26 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return 0
-            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                beams.add(Beam(bird))
             # 追加機能6（右シフトで弾幕チェンジ）
-            if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT:
+            if event.type == pg.KEYDOWN and event.key == pg.K_n:
                 if beam_pattern < 3:
                     beam_pattern += 1
-                else: # 3よりでかくなるならリセット
+                else: 
                     beam_pattern = 1
                 pattern_tmr = 100
-            # 追加機能6（Nキーと各コストでビームを発射）
-            if event.type == pg.KEYDOWN and event.key == pg.K_n:
-                cost = NeoBeam.patterns[beam_pattern]["cost"]
-                if score.value >= cost:
-                    neobeam = NeoBeam(bird, pattern=beam_pattern)
-                    beams.add(*neobeam.gen_beams())
-                    score.value -= cost
+            # キー判定用
+            elif event.type == pg.KEYDOWN:
+                # 右シフト押下とスペース
+                if event.key == pg.K_SPACE and (event.mod & pg.KMOD_RSHIFT):
+                    cost = NeoBeam.patterns[beam_pattern]["cost"]
+                    if score.value >= cost:
+                        neobeam = NeoBeam(bird, pattern=beam_pattern)
+                        beams.add(*neobeam.gen_beams())
+                        score.value -= cost
+            
+                elif event.key == pg.K_SPACE:
+                    beams.add(Beam(bird))
+
 
                     
         screen.blit(bg_img, [0, 0])
